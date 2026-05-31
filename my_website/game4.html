@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <title>像素鸟小游戏</title>
+    <style>
+        body { 
+            background-color: #333; 
+            display: flex; 
+            justify-content: center; 
+            align-items: center; 
+            height: 100vh; 
+            margin: 0; 
+            color: white; 
+            font-family: sans-serif; 
+            flex-direction: column; 
+        }
+        canvas { 
+            background-color: #70c5ce; /* 天空蓝背景 */
+            border: 2px solid #fff; 
+        }
+        .back-btn {
+            margin-top: 15px;
+            padding: 8px 20px;
+            background-color: #ff3366;
+            color: white;
+            text-decoration: none;
+            border-radius: 5px;
+        }
+    </style>
+</head>
+<body>
+    <!-- 游戏的画布 -->
+    <canvas id="gameCanvas" width="320" height="480"></canvas>
+    <p>按键盘【空格键】让小鸟飞起来，避开绿色水管！制作：_long</p>
+    <h2 id="score">得分: 0</h2>
+    
+    <!-- 返回按钮指向游戏集合页 -->
+    <a href="games-hub.html" class="back-btn">⬅ 返回游戏作品集</a>
+
+    <script>
+        const canvas = document.getElementById("gameCanvas");
+        const ctx = canvas.getContext("2d");
+        const scoreElement = document.getElementById("score");
+
+        // 定义小鸟的状态
+        let bird = { x: 50, y: 150, w: 20, h: 20, velocity: 0, gravity: 0.25, jump: -4.5 };
+        let pipes = []; // 存放水管的数组
+        let score = 0;
+        let frame = 0; // 记录游戏帧数，用来定时生成水管
+        let isGameOver = false;
+
+        // 监听空格键跳跃
+        window.addEventListener("keydown", function(e) {
+            if (e.code === "Space") {
+                if (isGameOver) {
+                    // 如果游戏结束，按空格重新开始
+                    location.reload();
+                } else {
+                    bird.velocity = bird.jump;
+                }
+            }
+        });
+
+        function update() {
+            if (isGameOver) return;
+
+            // 小鸟受重力影响下落
+            bird.velocity += bird.gravity;
+            bird.y += bird.velocity;
+
+            // 每100帧生成一个新的水管
+            if (frame % 100 === 0) {
+                let gap = 100; // 上下水管的间隙
+                let topHeight = Math.random() * (canvas.height - gap - 40) + 20;
+                pipes.push({ x: canvas.width, top: topHeight, bottom: topHeight + gap });
+            }
+
+            // 移动所有水管并检测碰撞
+            for (let i = 0; i < pipes.length; i++) {
+                let p = pipes[i];
+                p.x -= 2; // 水管向左移动的速度
+
+                // 碰撞检测：撞到天花板、地面或水管
+                if (bird.y + bird.h > canvas.height || bird.y < 0 || 
+                   (bird.x + bird.w > p.x && bird.x < p.x + 40 && 
+                   (bird.y < p.top || bird.y + bird.h > p.bottom))) {
+                    isGameOver = true;
+                    alert("游戏结束！你的最终得分是：" + score);
+                }
+
+                // 成功越过水管，加分
+                if (p.x + 40 < bird.x && !p.passed) {
+                    score++;
+                    scoreElement.innerText = "得分: " + score;
+                    p.passed = true;
+                }
+            }
+            
+            // 移除已经移出屏幕的水管，节省内存
+            if (pipes.length > 0 && pipes[0].x < -40) {
+                pipes.shift();
+            }
+
+            frame++;
+        }
+
+        function draw() {
+            // 清空画布
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            // 画小鸟（黄色方块）
+            ctx.fillStyle = "#ffd700";
+            ctx.fillRect(bird.x, bird.y, bird.w, bird.h);
+
+            // 画水管（绿色）
+            ctx.fillStyle = "#2ecc71";
+            for (let i = 0; i < pipes.length; i++) {
+                let p = pipes[i];
+                ctx.fillRect(p.x, 0, 40, p.top); // 上水管
+                ctx.fillRect(p.x, p.bottom, 40, canvas.height - p.bottom); // 下水管
+            }
+        }
+
+        function gameLoop() {
+            update();
+            draw();
+            requestAnimationFrame(gameLoop);
+        }
+
+        // 启动游戏
+        gameLoop();
+    </script>
+</body>
+</html>

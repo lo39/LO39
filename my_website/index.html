@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <title>long的个人主页</title>
+    <style>
+        body { font-family: "Microsoft YaHei", sans-serif; background-color: #f8f9fa; margin: 0; display: flex; justify-content: center; align-items: center; min-height: 100vh; }
+        .profile-card { background: white; width: 500px; padding: 60px; border-radius: 20px; box-shadow: 0 10px 30px rgba(0,0,0,0.1); text-align: center; }
+        h1 { color: #2c3e50; margin-bottom: 10px; }
+        p { color: #7f8c8d; line-height: 1.8; font-size: 16px; }
+        .avatar { font-size: 80px; margin-bottom: 20px; display: block; }
+        /* 进入游戏中心的专属按钮 */
+        .game-enter-btn { 
+            display: inline-block; margin-top: 40px; padding: 15px 50px; 
+            background: linear-gradient(45deg, #ff9a9e, #fad0c4); 
+            color: #fff; text-decoration: none; border-radius: 50px; 
+            font-weight: bold; font-size: 18px; box-shadow: 0 5px 15px rgba(255, 154, 158, 0.4);
+            transition: transform 0.2s;
+        }
+        .game-enter-btn:hover { transform: scale(1.05); }
+    </style>
+</head>
+<body>
+    <div class="profile-card">
+        <span class="avatar">👨‍💻</span>
+        <h1>你好，我是 long</h1>
+        <p>欢迎来到我的个人空间！<br>我是一名热爱编程的前端初学者。<br>平时喜欢钻研 HTML、CSS 和 JavaScript，并尝试开发有趣的小项目。</p>
+        
+        <!-- 唯一的入口：通往游戏集合页 -->
+        <a href="games-hub.html" class="game-enter-btn">🎮 访问我的游戏作品</a>
+    </div>
+</body>
+</html>

@@ -1,0 +1,197 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <title>long的极速跑酷</title>
+    <style>
+        body { 
+            background-color: #2c3e50; 
+            display: flex; 
+            justify-content: center; 
+            align-items: center; 
+            height: 100vh; 
+            margin: 0; 
+            color: white; 
+            font-family: "Microsoft YaHei", sans-serif; 
+            flex-direction: column; 
+        }
+        .game-container { position: relative; text-align: center; }
+        canvas { 
+            background-color: #87CEEB; /* 天空蓝 */
+            border: 4px solid #fff; 
+            border-radius: 10px;
+            box-shadow: 0 0 20px rgba(0,0,0,0.5);
+        }
+        .ui {
+            position: absolute; top: 15px; left: 20px; text-align: left; pointer-events: none;
+            text-shadow: 2px 2px 2px rgba(0,0,0,0.5);
+        }
+        .score { font-size: 24px; font-weight: bold; color: #FFD700; }
+        .coins { font-size: 20px; color: #FFA500; margin-top: 5px; }
+        
+        #gameOverScreen {
+            display: none; position: absolute; top: 50%; left: 50%;
+            transform: translate(-50%, -50%); background: rgba(0,0,0,0.85);
+            padding: 30px 50px; border-radius: 15px; text-align: center;
+        }
+        button {
+            margin-top: 20px; padding: 10px 25px; font-size: 18px;
+            background-color: #2ecc71; color: white; border: none;
+            border-radius: 5px; cursor: pointer;
+        }
+        button:hover { background-color: #27ae60; }
+        .back-btn { display: inline-block; margin-top: 15px; color: #ccc; text-decoration: none; font-size: 14px; }
+    </style>
+</head>
+<body>
+    <div class="game-container">
+        <canvas id="gameCanvas" width="800" height="400"></canvas>
+        <div class="ui">
+            <div class="score">得分: <span id="scoreVal">0</span></div>
+            <div class="coins">💰 金币: <span id="coinVal">0</span></div>
+        </div>
+        <div id="gameOverScreen">
+            <h2 style="color: #e74c3c;">💥 撞到了！游戏结束</h2>
+            <p>最终得分: <span id="finalScore">0</span></p>
+            <button onclick="restartGame()">🔄 重新开始</button>
+        </div>
+    </div>
+    <a href="index.html" class="back-btn">⬅ 返回游戏大厅</a>
+
+    <script>
+        const canvas = document.getElementById("gameCanvas");
+        const ctx = canvas.getContext("2d");
+
+        // 获取当前登录用户（用于本地存档）
+        const urlParams = new URLSearchParams(window.location.search);
+        const currentUser = urlParams.get('user') || 'guest';
+
+        // 玩家设定
+        let player = { x: 100, y: 300, w: 40, h: 40, dy: 0, jumpPower: -12, grounded: false };
+        const gravity = 0.6;
+        const groundY = 340; // 地面高度
+
+        let obstacles = [];
+        let coins = [];
+        let score = 0;
+        let gameSpeed = 5;
+        let isGameOver = false;
+        let frameCount = 0;
+
+        // 读取该用户的最高金币数（可选功能）
+        let userCoins = parseInt(localStorage.getItem('parkour_coins_' + currentUser)) || 0;
+        document.getElementById("coinVal").innerText = userCoins;
+
+        window.addEventListener("keydown", (e) => {
+            if ((e.code === "Space" || e.code === "ArrowUp") && player.grounded && !isGameOver) {
+                player.dy = player.jumpPower;
+                player.grounded = false;
+            }
+        });
+
+        function spawnObstacle() {
+            // 随机生成障碍物（高矮不一）
+            let height = 30 + Math.random() * 30;
+            obstacles.push({ x: canvas.width, y: groundY - height, w: 25, h: height });
+        }
+
+        function spawnCoin() {
+            // 随机生成金币（高度适中，方便跳跃吃到）
+            coins.push({ x: canvas.width, y: groundY - 60 - Math.random() * 80, size: 15, collected: false });
+        }
+
+        function update() {
+            if (isGameOver) return;
+            frameCount++;
+
+            // 玩家物理逻辑
+            player.dy += gravity;
+            player.y += player.dy;
+            if (player.y + player.h > groundY) {
+                player.y = groundY - player.h;
+                player.dy = 0;
+                player.grounded = true;
+            }
+
+            // 随着时间增加速度和分数
+            if (frameCount % 10 === 0) score++;
+            if (frameCount % 600 === 0) gameSpeed += 0.5; // 每10秒加速一次
+            document.getElementById("scoreVal").innerText = score;
+
+            // 生成障碍物和金币
+            if (frameCount % 100 === 0) spawnObstacle();
+            if (frameCount % 150 === 0) spawnCoin();
+
+            // 更新障碍物
+            for (let i = obstacles.length - 1; i >= 0; i--) {
+                let obs = obstacles[i];
+                obs.x -= gameSpeed;
+                // 碰撞检测
+                if (player.x < obs.x + obs.w && player.x + player.w > obs.x &&
+                    player.y < obs.y + obs.h && player.y + player.h > obs.y) {
+                    gameOver();
+                }
+                if (obs.x + obs.w < 0) obstacles.splice(i, 1);
+            }
+
+            // 更新金币
+            for (let i = coins.length - 1; i >= 0; i--) {
+                let c = coins[i];
+                c.x -= gameSpeed;
+                // 吃到金币检测
+                if (!c.collected && player.x < c.x + c.size && player.x + player.w > c.x &&
+                    player.y < c.y + c.size && player.y + player.h > c.y) {
+                    c.collected = true;
+                    userCoins++;
+                    localStorage.setItem('parkour_coins_' + currentUser, userCoins); // 实时保存金币
+                    document.getElementById("coinVal").innerText = userCoins;
+                }
+                if (c.x + c.size < 0 || c.collected) coins.splice(i, 1);
+            }
+        }
+
+        function draw() {
+            // 清空画布并绘制地面
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            ctx.fillStyle = "#654321"; // 土地颜色
+            ctx.fillRect(0, groundY, canvas.width, canvas.height - groundY);
+            ctx.fillStyle = "#7CFC00"; // 草地
+            ctx.fillRect(0, groundY, canvas.width, 10);
+
+            // 绘制玩家（带简单表情）
+            ctx.fillStyle = "#3498db";
+            ctx.fillRect(player.x, player.y, player.w, player.h);
+            ctx.fillStyle = "white";
+            ctx.fillText("😎", player.x + 8, player.y + 25);
+
+            // 绘制障碍物
+            ctx.fillStyle = "#e74c3c";
+            obstacles.forEach(obs => ctx.fillRect(obs.x, obs.y, obs.w, obs.h));
+
+            // 绘制金币
+            ctx.font = "20px Arial";
+            coins.forEach(c => { if (!c.collected) ctx.fillText("💰", c.x, c.y + 20); });
+
+            update();
+            requestAnimationFrame(draw);
+        }
+
+        function gameOver() {
+            isGameOver = true;
+            document.getElementById("finalScore").innerText = score;
+            document.getElementById("gameOverScreen").style.display = "block";
+        }
+
+        function restartGame() {
+            player.y = 300; player.dy = 0;
+            obstacles = []; coins = [];
+            score = 0; gameSpeed = 5; frameCount = 0;
+            isGameOver = false;
+            document.getElementById("gameOverScreen").style.display = "none";
+            draw();
+        }
+
+        draw();
+    </script>
+</body>
+</html>

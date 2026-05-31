@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <title>经典贪吃蛇小游戏</title>
+    <style>
+        body { background-color: #333; display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; color: white; font-family: sans-serif; flex-direction: column; }
+        canvas { background-color: #000; border: 2px solid #fff; }
+        .back-btn { margin-top: 15px; padding: 8px 20px; background-color: #ff3366; color: white; text-decoration: none; border-radius: 5px; }
+    </style>
+</head>
+<body>
+    <canvas id="gameCanvas" width="400" height="400"></canvas>
+    <h2 id="score">得分: 0</h2>
+    <p>使用键盘 ↑ ↓ ← → 方向键控制小蛇移动，吃到红色食物会变长！</p>
+    <a href="index.html" class="back-btn">⬅ 返回游戏大厅</a>
+
+    <script>
+        const canvas = document.getElementById("gameCanvas");
+        const ctx = canvas.getContext("2d");
+        const scoreElement = document.getElementById("score");
+
+        const box = 20; // 每一个格子的像素大小
+        let score = 0;
+        
+        // 初始化小蛇（从中间开始，长度为1）
+        let snake = [];
+        snake[0] = { x: 10 * box, y: 10 * box };
+
+        // 随机生成第一个食物
+        let food = {
+            x: Math.floor(Math.random() * (canvas.width / box)) * box,
+            y: Math.floor(Math.random() * (canvas.height / box)) * box
+        };
+
+        let d; // 记录当前方向
+
+        // 监听键盘事件控制方向
+        document.addEventListener("keydown", direction);
+        function direction(event) {
+            if (event.key === "ArrowLeft" && d !== "RIGHT") d = "LEFT";
+            else if (event.key === "ArrowUp" && d !== "DOWN") d = "UP";
+            else if (event.key === "ArrowRight" && d !== "LEFT") d = "RIGHT";
+            else if (event.key === "ArrowDown" && d !== "UP") d = "DOWN";
+        }
+
+        // 碰撞检测函数（判断是否撞到自己）
+        function collision(head, array) {
+            for (let i = 0; i < array.length; i++) {
+                if (head.x === array[i].x && head.y === array[i].y) return true;
+            }
+            return false;
+        }
+
+        // 游戏核心绘制与逻辑函数
+        function draw() {
+            // 清空画布
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            // 画小蛇
+            for (let i = 0; i < snake.length; i++) {
+                ctx.fillStyle = (i === 0) ? "#00ffcc" : "#ffffff"; // 蛇头是青色，身体是白色
+                ctx.fillRect(snake[i].x, snake[i].y, box, box);
+                ctx.strokeStyle = "#000";
+                ctx.strokeRect(snake[i].x, snake[i].y, box, box);
+            }
+
+            // 画食物
+            ctx.fillStyle = "#ff3366";
+            ctx.fillRect(food.x, food.y, box, box);
+
+            // 记录旧的蛇头位置
+            let snakeX = snake[0].x;
+            let snakeY = snake[0].y;
+
+            // 根据方向移动蛇头
+            if (d === "LEFT") snakeX -= box;
+            if (d === "UP") snakeY -= box;
+            if (d === "RIGHT") snakeX += box;
+            if (d === "DOWN") snakeY += box;
+
+            // 如果小蛇吃到了食物
+            if (snakeX === food.x && snakeY === food.y) {
+                score++;
+                scoreElement.innerText = "得分: " + score;
+                // 重新生成食物
+                food = {
+                    x: Math.floor(Math.random() * (canvas.width / box)) * box,
+                    y: Math.floor(Math.random() * (canvas.height / box)) * box
+                };
+                // 吃到食物时不移除尾巴，这样蛇就会变长
+            } else {
+                // 没吃到食物，移除尾巴，保持长度不变向前移动
+                snake.pop();
+            }
+
+            // 新的蛇头
+            let newHead = { x: snakeX, y: snakeY };
+
+            // 游戏结束判定：撞墙 或 撞到自己
+            if (snakeX < 0 || snakeX >= canvas.width || snakeY < 0 || snakeY >= canvas.height || collision(newHead, snake)) {
+                clearInterval(game);
+                alert("游戏结束！你的最终得分是：" + score);
+                location.reload(); // 刷新页面重新开始
+                return;
+            }
+
+            // 将新蛇头加入数组最前面
+            snake.unshift(newHead);
+        }
+
+        // 每100毫秒刷新一次画面（控制游戏速度）
+        let game = setInterval(draw, 100);
+    </script>
+</body>
+</html>

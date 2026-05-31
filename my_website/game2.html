@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <title>猫咪吃咖啡小游戏</title>
+    <style>
+        body {
+            background-color: #333;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            margin: 0;
+            color: white;
+            font-family: sans-serif;
+            flex-direction: column;
+            overflow: hidden; /* 防止滚动条出现 */
+        }
+        #gameArea {
+            position: relative;
+            width: 400px;
+            height: 600px;
+            background-color: #222;
+            border: 2px solid #fff;
+            overflow: hidden;
+        }
+        #cat {
+            position: absolute;
+            bottom: 10px;
+            left: 175px;
+            width: 50px;
+            height: 50px;
+            font-size: 40px;
+            line-height: 50px;
+            text-align: center;
+        }
+        .coffee {
+            position: absolute;
+            top: 0;
+            width: 40px;
+            height: 40px;
+            font-size: 30px;
+            line-height: 40px;
+            text-align: center;
+        }
+        .back-btn {
+            margin-top: 15px;
+            padding: 8px 20px;
+            background-color: #ff3366;
+            color: white;
+            text-decoration: none;
+            border-radius: 5px;
+        }
+    </style>
+</head>
+<body>
+
+    <!-- 游戏区域 -->
+    <div id="gameArea">
+        <div id="cat">🐱</div>
+    </div>
+    <h2 id="score">得分: 0</h2>
+    <a href="index.html" class="back-btn">⬅ 返回游戏大厅</a>
+
+    <script>
+        const gameArea = document.getElementById("gameArea");
+        const cat = document.getElementById("cat");
+        const scoreElement = document.getElementById("score");
+        
+        let score = 0;
+        let catLeft = 175; // 小猫初始位置
+        const speed = 15;  // 小猫移动速度
+        const screenWidth = 400;
+        const screenHeight = 600;
+
+        // 1. 键盘控制小猫左右移动
+        window.addEventListener("keydown", function(e) {
+            if (e.key === "ArrowLeft" && catLeft > 0) {
+                catLeft -= speed;
+            }
+            if (e.key === "ArrowRight" && catLeft < screenWidth - 50) {
+                catLeft += speed;
+            }
+            cat.style.left = catLeft + "px";
+        });
+
+        // 2. 生成并掉落咖啡的逻辑
+        function createCoffee() {
+            const coffee = document.createElement("div");
+            coffee.className = "coffee";
+            coffee.innerText = "☕";
+            // 随机生成水平位置
+            coffee.style.left = Math.floor(Math.random() * (screenWidth - 40)) + "px";
+            gameArea.appendChild(coffee);
+
+            let coffeeTop = 0;
+            const dropSpeed = 3 + Math.random() * 3; // 随机下落速度
+
+            const fallInterval = setInterval(() => {
+                coffeeTop += dropSpeed;
+                coffee.style.top = coffeeTop + "px";
+
+                // 获取小猫和咖啡的实时位置，用于碰撞检测
+                const catRect = cat.getBoundingClientRect();
+                const coffeeRect = coffee.getBoundingClientRect();
+
+                // 判断是否接住了咖啡（两个方块发生重叠）
+                if (
+                    coffeeRect.bottom >= catRect.top + 20 &&
+                    coffeeRect.top <= catRect.bottom &&
+                    coffeeRect.right >= catRect.left &&
+                    coffeeRect.left <= catRect.right
+                ) {
+                    score++;
+                    scoreElement.innerText = "得分: " + score;
+                    gameArea.removeChild(coffee);
+                    clearInterval(fallInterval);
+                } 
+                // 判断咖啡是否掉出屏幕底部
+                else if (coffeeTop > screenHeight - 40) {
+                    gameArea.removeChild(coffee);
+                    clearInterval(fallInterval);
+                }
+            }, 20);
+        }
+
+        // 每隔1秒掉落一杯咖啡
+        setInterval(createCoffee, 1000);
+    </script>
+
+</body>
+</html>

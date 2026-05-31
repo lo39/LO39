@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <title>long的接方块小游戏</title>
+    <style>
+        body {
+            background-color: #333;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            margin: 0;
+            color: white;
+            font-family: sans-serif;
+            flex-direction: column;
+        }
+        canvas {
+            background-color: #000;
+            border: 2px solid #fff;
+        }
+        /* 新增：返回按钮的样式 */
+        .back-btn {
+            margin-top: 15px;
+            padding: 8px 20px;
+            background-color: #ff3366;
+            color: white;
+            text-decoration: none;
+            border-radius: 5px;
+            font-size: 14px;
+        }
+        .back-btn:hover { background-color: #d62c53; }
+    </style>
+</head>
+<body>
+
+    <!-- 游戏的画布 -->
+    <canvas id="gameCanvas" width="400" height="600"></canvas>
+    <p>按键盘 ← 左箭头 或 → 右箭头 移动蓝色方块，接住掉下来的红色方块！制作：_long</p>
+    <h2 id="score">得分: 0</h2>
+    
+    <!-- 新增：返回主页的链接按钮 -->
+    <a href="index.html" class="back-btn">⬅ 返回个人主页</a>
+
+    <script>
+        // 1. 获取画布和绘图工具
+        const canvas = document.getElementById("gameCanvas");
+        const ctx = canvas.getContext("2d");
+        const scoreElement = document.getElementById("score");
+
+        // 2. 定义游戏里的角色（变量与状态）
+        let player = { x: 175, y: 550, w: 50, h: 20, speed: 5 }; 
+        let enemy = { x: 180, y: 0, w: 30, h: 30, speed: 3 };   
+        let score = 0;
+        let keys = {}; 
+
+        // 3. 接收玩家的输入（监听键盘按下和抬起）
+        window.addEventListener("keydown", function(e) { keys[e.key] = true; });
+        window.addEventListener("keyup", function(e) { keys[e.key] = false; });
+
+        // 4. 游戏的核心逻辑更新
+        function update() {
+            if (keys["ArrowLeft"] && player.x > 0) { player.x -= player.speed; }
+            if (keys["ArrowRight"] && player.x < canvas.width - player.w) { player.x += player.speed; }
+
+            enemy.y += enemy.speed;
+
+            // 碰撞检测
+            if (
+                player.x < enemy.x + enemy.w &&
+                player.x + player.w > enemy.x &&
+                player.y < enemy.y + enemy.h &&
+                player.y + player.h > enemy.y
+            ) {
+                score++;
+                scoreElement.innerText = "得分: " + score;
+                enemy.y = 0;
+                enemy.x = Math.random() * (canvas.width - enemy.w);
+                enemy.speed += 0.2; 
+            }
+
+            if (enemy.y > canvas.height) {
+                alert("游戏结束！最终得分：" + score);
+                score = 0;
+                scoreElement.innerText = "得分: 0";
+                enemy.y = 0;
+                enemy.speed = 3;
+            }
+        }
+
+        // 5. 渲染画面
+        function draw() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            ctx.fillStyle = "#00ffcc";
+            ctx.fillRect(player.x, player.y, player.w, player.h);
+            ctx.fillStyle = "#ff3366";
+            ctx.fillRect(enemy.x, enemy.y, enemy.w, enemy.h);
+        }
+
+        // 6. 启动游戏循环
+        function gameLoop() {
+            update(); 
+            draw();   
+            requestAnimationFrame(gameLoop); 
+        }
+
+        gameLoop();
+    </script>
+
+</body>
+</html>

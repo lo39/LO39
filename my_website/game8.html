@@ -1,0 +1,278 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <title>勇者的大冒险 - 开放世界RPG</title>
+    <style>
+        body { 
+            background-color: #222; 
+            display: flex; 
+            justify-content: center; 
+            align-items: center; 
+            height: 100vh; 
+            margin: 0; 
+            color: white; 
+            font-family: "Microsoft YaHei", sans-serif; 
+            flex-direction: column; 
+        }
+        .game-container { position: relative; }
+        canvas { 
+            background-color: #000; 
+            border: 4px solid #fff; 
+            box-shadow: 0 0 20px rgba(0,0,0,0.5);
+            image-rendering: pixelated; /* 让像素画更清晰 */
+        }
+        .ui-panel {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            background: rgba(0, 0, 0, 0.7);
+            padding: 10px;
+            border-radius: 5px;
+            pointer-events: none; /* 让点击穿透UI */
+        }
+        .controls { margin-top: 10px; text-align: center; color: #aaa; font-size: 14px; }
+        .back-btn { display: inline-block; margin-top: 10px; color: #ff3366; text-decoration: none; }
+    </style>
+</head>
+<body>
+    <div class="game-container">
+        <!-- 游戏画布 -->
+        <canvas id="gameCanvas" width="640" height="480"></canvas>
+        
+        <!-- 状态UI -->
+        <div class="ui-panel">
+            <div>❤️ 生命: <span id="hp">100</span>/<span id="max-hp">100</span></div>
+            <div>⚔️ 攻击: <span id="atk">10</span></div>
+            <div>💰 金币: <span id="gold">0</span></div>
+            <div>🗺️ 坐标: <span id="pos">0, 0</span></div>
+        </div>
+    </div>
+
+    <div class="controls">
+        【方向键/WASD】移动探索 | 【空格键】与物体交互/攻击 | 寻找绿色史莱姆和金色宝箱！
+        <br>
+        <a href="games-hub.html" class="back-btn">⬅ 返回游戏作品集</a>
+    </div>
+
+    <script>
+        const canvas = document.getElementById("gameCanvas");
+        const ctx = canvas.getContext("2d");
+        
+        // --- 游戏配置 ---
+        const TILE_SIZE = 32; // 每个格子的大小
+        const MAP_WIDTH = 40; // 地图宽度（格子数）
+        const MAP_HEIGHT = 30; // 地图高度（格子数）
+        
+        // 地形定义
+        const TERRAIN = {
+            GRASS: 0, // 草地（可走）
+            FOREST: 1, // 森林（不可走）
+            WATER: 2, // 水（不可走）
+            ROAD: 3, // 道路（可走）
+            WALL: 4 // 墙壁（不可走）
+        };
+
+        // --- 游戏状态 ---
+        let player = { x: 5, y: 5, hp: 100, maxHp: 100, atk: 10, gold: 0 };
+        let camera = { x: 0, y: 0 }; // 摄像机位置
+        let map = []; // 存储地图数据
+        let entities = []; // 存储怪物和宝箱
+
+        // --- 初始化 ---
+        function init() {
+            // 1. 生成随机地图
+            for (let y = 0; y < MAP_HEIGHT; y++) {
+                let row = [];
+                for (let x = 0; x < MAP_WIDTH; x++) {
+                    // 简单的随机地形生成逻辑
+                    let rand = Math.random();
+                    if (x === 0 || x === MAP_WIDTH - 1 || y === 0 || y === MAP_HEIGHT - 1) {
+                        row.push(TERRAIN.WALL); // 边界围墙
+                    } else if (rand < 0.1) {
+                        row.push(TERRAIN.WATER); // 10% 水
+                    } else if (rand < 0.25) {
+                        row.push(TERRAIN.FOREST); // 15% 森林
+                    } else if (rand < 0.3 && x > 10 && y > 10) {
+                         row.push(TERRAIN.ROAD); // 局部道路
+                    } else {
+                        row.push(TERRAIN.GRASS); // 其余是草地
+                    }
+                }
+                map.push(row);
+            }
+
+            // 2. 放置玩家出生点（确保在草地上）
+            player.x = 5; player.y = 5;
+            map[player.y][player.x] = TERRAIN.GRASS;
+
+            // 3. 随机生成怪物和宝箱
+            for (let i = 0; i < 30; i++) {
+                spawnEntity("monster");
+            }
+            for (let i = 0; i < 10; i++) {
+                spawnEntity("chest");
+            }
+
+            updateUI();
+            gameLoop();
+        }
+
+        function spawnEntity(type) {
+            let ex, ey;
+            do {
+                ex = Math.floor(Math.random() * MAP_WIDTH);
+                ey = Math.floor(Math.random() * MAP_HEIGHT);
+            } while (map[ey][ex] !== TERRAIN.GRASS && map[ey][ex] !== TERRAIN.ROAD); // 只生成在空地
+
+            if (type === "monster") {
+                entities.push({ type: "monster", x: ex, y: ey, hp: 30, atk: 5, icon: "👾" });
+            } else {
+                entities.push({ type: "chest", x: ex, y: ey, gold: Math.floor(Math.random() * 50) + 10, icon: "💰" });
+            }
+        }
+
+        // --- 输入处理 ---
+        window.addEventListener("keydown", (e) => {
+            let dx = 0, dy = 0;
+            if (e.key === "ArrowUp" || e.key === "w") dy = -1;
+            if (e.key === "ArrowDown" || e.key === "s") dy = 1;
+            if (e.key === "ArrowLeft" || e.key === "a") dx = -1;
+            if (e.key === "ArrowRight" || e.key === "d") dx = 1;
+
+            if (dx !== 0 || dy !== 0) {
+                movePlayer(dx, dy);
+            }
+
+            if (e.code === "Space") {
+                interact();
+            }
+        });
+
+        function movePlayer(dx, dy) {
+            let newX = player.x + dx;
+            let newY = player.y + dy;
+
+            // 碰撞检测：不能穿墙、穿水、穿森林
+            if (map[newY][newX] === TERRAIN.GRASS || map[newY][newX] === TERRAIN.ROAD) {
+                player.x = newX;
+                player.y = newY;
+            }
+        }
+
+        function interact() {
+            // 检查周围有没有互动物体
+            let target = entities.find(e => Math.abs(e.x - player.x) <= 1 && Math.abs(e.y - player.y) <= 1 && (e.x !== player.x || e.y !== player.y));
+            
+            if (target) {
+                if (target.type === "monster") {
+                    // 战斗逻辑
+                    let dmg = Math.floor(player.atk * (0.8 + Math.random() * 0.4));
+                    target.hp -= dmg;
+                    alert(`⚔️ 你攻击了怪物，造成 ${dmg} 点伤害！\n怪物剩余HP: ${target.hp}`);
+                    
+                    if (target.hp <= 0) {
+                        entities = entities.filter(e => e !== target); // 移除死掉的怪物
+                        player.gold += 20;
+                        alert("🎉 击败了怪物！获得 20 金币！");
+                    } else {
+                        // 怪物反击
+                        let enemyDmg = Math.floor(target.atk * (0.8 + Math.random() * 0.4));
+                        player.hp -= enemyDmg;
+                        alert(`💥 怪物反击！你受到了 ${enemyDmg} 点伤害！`);
+                        if (player.hp <= 0) {
+                            player.hp = 0;
+                            alert("☠️ 你被打败了... 刷新页面重新开始。");
+                            location.reload();
+                        }
+                    }
+                } else if (target.type === "chest") {
+                    // 开宝箱
+                    player.gold += target.gold;
+                    player.hp = Math.min(player.maxHp, player.hp + 20); // 宝箱也回血
+                    alert(`🎁 打开宝箱！获得 ${target.gold} 金币，并恢复了 20 点生命！`);
+                    entities = entities.filter(e => e !== target);
+                }
+            } else {
+                // 如果面前没东西，尝试向面对的方向攻击空气（或者显示提示）
+                // 这里简单处理为：如果没有目标，就不做任何事
+            }
+            updateUI();
+        }
+
+        function updateUI() {
+            document.getElementById("hp").innerText = player.hp;
+            document.getElementById("max-hp").innerText = player.maxHp;
+            document.getElementById("atk").innerText = player.atk;
+            document.getElementById("gold").innerText = player.gold;
+            document.getElementById("pos").innerText = `${player.x}, ${player.y}`;
+        }
+
+        // --- 渲染循环 ---
+        function gameLoop() {
+            // 1. 更新摄像机位置（让玩家始终在屏幕中间）
+            camera.x = player.x * TILE_SIZE - canvas.width / 2 + TILE_SIZE / 2;
+            camera.y = player.y * TILE_SIZE - canvas.height / 2 + TILE_SIZE / 2;
+
+            // 限制摄像机不要超出地图边界
+            camera.x = Math.max(0, Math.min(camera.x, MAP_WIDTH * TILE_SIZE - canvas.width));
+            camera.y = Math.max(0, Math.min(camera.y, MAP_HEIGHT * TILE_SIZE - canvas.height));
+
+            // 2. 清空画布
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            // 3. 绘制地图（只绘制摄像机范围内的格子，优化性能）
+            let startCol = Math.floor(camera.x / TILE_SIZE);
+            let endCol = startCol + (canvas.width / TILE_SIZE) + 1;
+            let startRow = Math.floor(camera.y / TILE_SIZE);
+            let endRow = startRow + (canvas.height / TILE_SIZE) + 1;
+
+            for (let y = startRow; y <= endRow; y++) {
+                for (let x = startCol; x <= endCol; x++) {
+                    if (y >= 0 && y < MAP_HEIGHT && x >= 0 && x < MAP_WIDTH) {
+                        let tileType = map[y][x];
+                        let drawX = Math.round(x * TILE_SIZE - camera.x);
+                        let drawY = Math.round(y * TILE_SIZE - camera.y);
+
+                        // 绘制地形颜色
+                        if (tileType === TERRAIN.GRASS) ctx.fillStyle = "#7CFC00"; // 亮绿
+                        else if (tileType === TERRAIN.FOREST) ctx.fillStyle = "#228B22"; // 深绿
+                        else if (tileType === TERRAIN.WATER) ctx.fillStyle = "#1E90FF"; // 蓝色
+                        else if (tileType === TERRAIN.ROAD) ctx.fillStyle = "#DEB887"; // 土色
+                        else if (tileType === TERRAIN.WALL) ctx.fillStyle = "#555"; // 灰色
+                        
+                        ctx.fillRect(drawX, drawY, TILE_SIZE, TILE_SIZE);
+                        
+                        // 绘制网格线（可选，为了看清格子）
+                        ctx.strokeStyle = "rgba(0,0,0,0.1)";
+                        ctx.strokeRect(drawX, drawY, TILE_SIZE, TILE_SIZE);
+                    }
+                }
+            }
+
+            // 4. 绘制实体（宝箱和怪物）
+            ctx.font = "24px Arial";
+            ctx.textAlign = "center";
+            ctx.textBaseline = "middle";
+            entities.forEach(e => {
+                let drawX = Math.round(e.x * TILE_SIZE - camera.x + TILE_SIZE/2);
+                let drawY = Math.round(e.y * TILE_SIZE - camera.y + TILE_SIZE/2);
+                // 只有当实体在屏幕内时才绘制
+                if (drawX > -20 && drawX < canvas.width + 20 && drawY > -20 && drawY < canvas.height + 20) {
+                    ctx.fillText(e.icon, drawX, drawY);
+                }
+            });
+
+            // 5. 绘制玩家
+            let pDrawX = Math.round(player.x * TILE_SIZE - camera.x + TILE_SIZE/2);
+            let pDrawY = Math.round(player.y * TILE_SIZE - camera.y + TILE_SIZE/2);
+            ctx.fillText("🧑‍🎤", pDrawX, pDrawY);
+
+            requestAnimationFrame(gameLoop);
+        }
+
+        // 启动游戏
+        init();
+    </script>
+</body>
+</html>

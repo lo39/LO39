@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <title>long的个人游戏大厅</title>
+    <style>
+        body { font-family: "Microsoft YaHei", sans-serif; background-color: #f4f7f6; display: flex; justify-content: center; align-items: center; min-height: 100vh; margin: 0; }
+        .container { text-align: center; background: white; padding: 50px; border-radius: 15px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); max-width: 900px; width: 90%; position: relative; }
+        h1 { color: #333; margin-bottom: 10px; } 
+        p { color: #666; line-height: 1.6; margin-bottom: 30px; }
+        
+        /* 音乐控制按钮样式 */
+        .music-control {
+            position: absolute; top: 20px; right: 20px;
+            background-color: #ff9800; color: white; border: none;
+            padding: 8px 15px; border-radius: 20px; cursor: pointer;
+            font-size: 14px; transition: background 0.3s;
+        }
+        .music-control:hover { background-color: #e68900; }
+
+        /* 游戏列表容器 */
+        #game-list { display: flex; flex-wrap: wrap; justify-content: center; gap: 20px; }
+        
+        /* 单个游戏卡片的样式 */
+        .game-card { 
+            display: block; width: 160px; padding: 20px; 
+            background-color: #f8f9fa; border-radius: 15px; 
+            text-decoration: none; color: #333; 
+            transition: transform 0.2s, box-shadow 0.2s;
+            border: 1px solid #eee;
+        }
+        .game-card:hover { transform: translateY(-5px); box-shadow: 0 5px 15px rgba(0,0,0,0.1); background-color: #fff; }
+        .game-icon { font-size: 40px; margin-bottom: 10px; display: block; }
+        .game-name { font-weight: bold; font-size: 16px; }
+    </style>
+</head>
+<body>
+    <!-- 背景音乐标签 -->
+    <!-- loop表示循环播放，preload表示预加载音乐 -->
+    <audio id="bgMusic" loop preload="auto">
+        <source src="hall_music.mp3" type="audio/mpeg">
+        您的浏览器不支持 audio 元素。
+    </audio>
+
+    <div class="container">
+        <!-- 音乐开关按钮 -->
+        <button class="music-control" onclick="toggleMusic()">🔊 关闭音乐</button>
+
+        <h1>欢迎来到 long 的游戏大厅</h1>
+        <p>这里收录了我自己开发的所有网页小游戏，快来挑战吧！</p>
+        
+        <!-- 游戏按钮将在这里自动生成 -->
+        <div id="game-list"></div>
+    </div>
+
+    <script>
+        // 在这里配置你的所有游戏
+        const games = [
+            { name: "接方块游戏", icon: "🟦", url: "game1.html" },
+            { name: "猫咪吃咖啡", icon: "🐱", url: "game2.html" },
+            { name: "经典贪吃蛇", icon: "🐍", url: "game3.html" },
+            { name: "飞翔像素鸟", icon: "🐦", url: "game4.html" },
+            { name: "经典打砖块", icon: "🧱", url: "game5.html" },
+            { name: "迷你农场", icon: "🌾", url: "game6.html" },
+            { name: "勇者地下城", icon: "⚔️", url: "game7.html" },
+            { name: "大地图冒险", icon: "🗺️", url: "game8.html" },
+            { name: "极速跑酷", icon: "🏃", url: "game10.html" }
+        ];
+
+        const gameList = document.getElementById("game-list");
+        games.forEach(game => {
+            const card = document.createElement("a");
+            card.href = game.url;
+            card.className = "game-card";
+            card.innerHTML = `<span class="game-icon">${game.icon}</span><span class="game-name">${game.name}</span>`;
+            gameList.appendChild(card);
+        });
+
+        // 背景音乐控制逻辑
+        const music = document.getElementById("bgMusic");
+        const musicBtn = document.querySelector(".music-control");
+        let isPlaying = false;
+
+        // 尝试自动播放（现代浏览器通常需要用户交互后才能播放声音）
+        window.addEventListener('click', function() {
+            if (!isPlaying) {
+                music.play();
+                isPlaying = true;
+            }
+        }, { once: true }); // 只执行一次
+
+        // 切换音乐播放/暂停状态
+        function toggleMusic() {
+            if (isPlaying) {
+                music.pause();
+                musicBtn.innerText = "🔇 开启音乐";
+            } else {
+                music.play();
+                musicBtn.innerText = "🔊 关闭音乐";
+            }
+            isPlaying = !isPlaying;
+        }
+    </script>
+</body>
+</html>
